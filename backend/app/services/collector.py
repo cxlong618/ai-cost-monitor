@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.registry import get_adapter
 from app.models.entities import Account, Snapshot
+from app.services.alert_engine import evaluate_alerts
 
 logger = logging.getLogger("acm.collect")
 logger.setLevel(logging.INFO)
@@ -48,5 +49,5 @@ async def collect_snapshot(
     account.status = 0
     db.add(row)
     await db.commit()
-    # TODO: 触发告警规则引擎（F4）
+    await evaluate_alerts(db, account, row)  # F4: 快照入库后评估告警
     return row
