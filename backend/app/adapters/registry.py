@@ -20,12 +20,19 @@ def available_providers() -> list[str]:
 
 
 def _bootstrap() -> None:
+    from app.adapters.anthropic import AnthropicAdapter
     from app.adapters.deepseek import DeepSeekAdapter
+    from app.adapters.openai import OpenAIAdapter
     from app.adapters.openrouter import OpenRouterAdapter
+    from app.adapters.siliconflow import SiliconFlowAdapter
+    from app.adapters.zai import ZaiAdapter
 
     register(DeepSeekAdapter())
     register(OpenRouterAdapter())
-    # TODO: zai（社区逆向端点，待实测补录）/ anthropic / openai / siliconflow
+    register(AnthropicAdapter())
+    register(OpenAIAdapter())
+    register(SiliconFlowAdapter())
+    register(ZaiAdapter())
 
 
 _bootstrap()
