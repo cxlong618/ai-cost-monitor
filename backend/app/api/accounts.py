@@ -24,11 +24,20 @@ async def list_providers():
     return {"providers": available_providers()}
 
 
+DEV_USER_ID = 1  # TODO: JWT 上线后替换为当前登录用户
+
+
+@router.get("")
+async def list_accounts(db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(select(Account).where(Account.user_id == DEV_USER_ID, Account.status != 3))).scalars().all()
+    return [{"id": r.id, "provider": r.provider, "mode": r.mode, "name": r.name, "status": r.status} for r in rows]
+
+
 @router.post("")
 async def create_account(body: AccountCreate, db: AsyncSession = Depends(get_db)):
     if body.provider not in available_providers():
         raise HTTPException(400, f"不支持的厂商: {body.provider}")
-    acc = Account(provider=body.provider, name=body.name, mode=body.mode)
+    acc = Account(user_id=DEV_USER_ID, provider=body.provider, name=body.name, mode=body.mode)
     db.add(acc)
     await db.commit()
     return {"id": acc.id, "provider": acc.provider, "mode": acc.mode}
