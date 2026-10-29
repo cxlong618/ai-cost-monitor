@@ -8,8 +8,9 @@ export default defineConfig({
     proxy: {
       // 开发期代理到 FastAPI，Key 请求头透传
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

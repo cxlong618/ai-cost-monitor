@@ -2,7 +2,7 @@
 
 铁律：本模块任何日志不得包含 api_key。
 """
-import logging
+from loguru import logger
 
 from fastapi import Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,10 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.adapters.registry import get_adapter
 from app.models.entities import Account, Snapshot
 from app.services.alert_engine import evaluate_alerts
-
-logger = logging.getLogger("acm.collect")
-logger.setLevel(logging.INFO)
-
 
 async def collect_snapshot(
     db: AsyncSession,
@@ -25,7 +21,7 @@ async def collect_snapshot(
     try:
         snap = await adapter.fetch_snapshot(x_provider_key)
     except Exception as e:
-        logger.warning("provider=%s account=%d fetch failed: %s", account.provider, account.id, type(e).__name__)
+        logger.warning("provider={} account={} fetch failed: {}", account.provider, account.id, type(e).__name__)
         account.status = 2  # fetch_error
         await db.commit()
         raise HTTPException(status_code=502, detail=f"厂商接口请求失败: {type(e).__name__}")
@@ -33,6 +29,7 @@ async def collect_snapshot(
     balance, quota, cost = snap.balance, snap.quota, snap.cost
     row = Snapshot(
         account_id=account.id,
+        fetched_at=snap.fetched_at,
         source=0,  # 自动采集
         raw_payload_key=f"raw/{account.provider}/{snap.fetched_at:%Y%m%dT%H%M%S}",
         currency=(balance.currency if balance else (cost.currency if cost else None)),
@@ -47,6 +44,7 @@ async def collect_snapshot(
         cost_month=cost.month if cost else None,
     )
     account.status = 0
+    account.last_fetch_at = snap.fetched_at
     db.add(row)
     await db.commit()
     await evaluate_alerts(db, account, row)  # F4: 快照入库后评估告警

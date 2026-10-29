@@ -17,7 +17,7 @@
       <div class="sidebar-foot">
         <div class="trust">
           <div>🔐 Key 只存在你的浏览器</div>
-          <div>服务器见不到、存不了</div>
+          <div>后端仅内存中转，不落库</div>
         </div>
         <button class="logout" @click="logout">退出登录</button>
       </div>
@@ -32,10 +32,13 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { api } from './lib/api'
+import { lockVault } from './lib/keyStore'
 
 const router = useRouter()
 function logout() {
   localStorage.removeItem('acm_token')
+  localStorage.removeItem('acm_user_id')
+  lockVault()
   delete api.defaults.headers.common['Authorization']
   router.push('/login')
 }
@@ -87,4 +90,14 @@ nav a.router-link-active {
 .logout:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
 
 .content { flex: 1; padding: 26px 30px; max-width: 1200px; }
+.content { min-width: 0; }
+@media (max-width: 768px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; padding: 12px; }
+  .logo, .trust { display: none; }
+  nav { flex-direction: row; flex-wrap: wrap; margin-top: 0; }
+  nav a { padding: 8px; }
+  .sidebar-foot { margin-top: 8px; }
+  .content { padding: 16px; }
+}
 </style>

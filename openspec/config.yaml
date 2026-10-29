@@ -1,0 +1,65 @@
+schema: spec-driven
+
+context: |
+  Language: zh-CN
+  All artifacts must be written in zh-CN.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  项目：AI Cost Monitor，面向使用多家 AI API/订阅的开发者，监控真实余额、配额和成本。
+  技术栈：backend/ 使用 Python、FastAPI、异步 SQLAlchemy 2.0、asyncpg、PostgreSQL；
+  frontend/ 使用 Vue 3、Vite、Pinia、Vue Router、ECharts、Axios。
+  阅读入口：README.md、HANDOVER.md，以及 docs/ 下功能设计、数据库设计和 API 调研。
+  事实优先级：当前代码用于确认实现，最新交接用于了解部署与实测状态，早期设计仅代表规划。
+  核心安全约束：API Key 在浏览器以 WebCrypto AES-GCM 加密后存 IndexedDB；
+  采集请求通过 X-Provider-Key 传给后端，仅在内存中转给厂商，禁止持久化或写入日志。
+  不得将“Key 不落库”描述为“服务器见不到 Key”；后端确实接触请求中的明文 Key。
+  本地 Key 模式无法支持用户离线时的服务端定时采集，早期文档的托管 Key/定时调度不是当前默认方案。
+  厂商适配器在 backend/app/adapters/ 实现 ProviderAdapter 并在 registry.py 注册；
+  余额制、配额制、成本制统一转换为快照，采集后评估告警。
+  按 2026-10-29 交接记录：DeepSeek、智谱 zai 已通过真实 Key 全链路验证；
+  OpenRouter、Anthropic、OpenAI、SiliconFlow 尚未实测，不得把已有适配器等同于验证通过。
+  当前已补齐账户维护、本地 Key 模式选择、口令保险箱、站内速率告警、告警已读、趋势时间切换及币种展示。
+  计算器支持免登录和用户自填同币种单价比较；没有内置厂商定价或自动套餐推荐。
+  邮件通道、采集失败事件通知、支付及付费报告仍待完善；账单类适配器尚有参数/解析/分页风险，需真实验证。
+  详细审查状态见 docs/01-功能设计.md 第 7 节及 complete-monitoring-workflows 变更记录。
+  部署边界：交接环境由 nginx 转发至后端 8001；8000 属于其他服务，不得占用或改动。
+  部署由交接约定的维护方负责，本地初始化不包含远程部署。
+  上线前待办包括 HTTPS、清理测试账号及更换开发 JWT 密钥；不得把交接中的凭据复制进规范。
+  开发环境为 Windows 11 / PowerShell，文件使用 UTF-8，命令应兼容当前终端。
+  Python 新增或调整日志默认使用 loguru；配置统一采用 YAML 并妥善处理 Windows 路径。
+  当前实现仍使用 logging 和 pydantic-settings/.env；配置与日志迁移应另立变更，不在初始化时暗中改写。
+  说明文档集中放 docs/，OpenSpec 原生配置与规范保留在 openspec/，避免额外总结文档。
+
+rules:
+  proposal:
+    - 使用简体中文描述问题、范围及影响，区分当前实现、交接记录与待验证假设。
+    - 涉及 Key、认证、采集或厂商适配时明确安全边界；不得包含真实密钥或账号凭据。
+  specs:
+    - 保留 OpenSpec 结构标题及 SHALL/MUST 关键字，需求正文和场景描述使用简体中文。
+    - 将现有行为与目标行为分开，不把历史设计或未实测接口写成已实现事实。
+  design:
+    - 说明对现有适配器、快照、账户隔离及浏览器本地 Key 存储的影响。
+  tasks:
+    - 任务应可执行、可验证，按变更范围安排必要检查；Python 改动需做语法校验。
+    - 前端变更按需运行 npm run build；真实厂商验证需要合法可用的 Key，不得伪称已完成。
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

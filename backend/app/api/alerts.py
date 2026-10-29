@@ -1,29 +1,37 @@
 """告警规则 API"""
+from datetime import datetime, timezone
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
-from sqlalchemy import select
+from pydantic import BaseModel, Field, model_validator, ConfigDict
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import current_user
 from app.core.database import get_db
-from app.models.entities import Account, AlertEvent, AlertRule, User
+from app.models.entities import AlertEvent, AlertRule, User
 from app.services.alert_engine import can_add_rule
+from app.services.ownership import own_account as _own_account
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 
 class RuleIn(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
     account_id: int
     type: int = Field(ge=0, le=2, description="0=余额阈值 1=配额阈值 2=速率异常")
-    threshold: float
-    channel: int = 0  # 0=站内 1=邮件
+    threshold: float = Field(ge=0, le=99999999)
+    channel: Literal[0] = 0  # 尚未提供邮件投递，明确拒绝该通道
+
+    @model_validator(mode="after")
+    def validate_threshold(self):
+        if self.type == 1 and self.threshold > 100:
+            raise ValueError("配额阈值不能超过 100%")
+        return self
 
 
-async def _own_account(db: AsyncSession, user: User, account_id: int) -> Account:
-    acc = (await db.execute(select(Account).where(Account.id == account_id))).scalar_one_or_none()
-    if acc is None or acc.user_id != user.id:
-        raise HTTPException(404, "账户不存在")
-    return acc
+class RuleUpdate(BaseModel):
+    enabled: Literal[0, 1]
 
 
 @router.get("/rules")
@@ -55,7 +63,34 @@ async def delete_rule(rule_id: int, user: User = Depends(current_user), db: Asyn
     rule = (await db.execute(select(AlertRule).where(AlertRule.id == rule_id))).scalar_one_or_none()
     if rule is None or rule.user_id != user.id:
         raise HTTPException(404, "规则不存在")
+    await db.execute(delete(AlertEvent).where(AlertEvent.rule_id == rule.id))
     await db.delete(rule)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.patch("/rules/{rule_id}")
+async def update_rule(rule_id: int, body: RuleUpdate, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    rule = await db.get(AlertRule, rule_id)
+    if rule is None or rule.user_id != user.id:
+        raise HTTPException(404, "规则不存在")
+    await _own_account(db, user, rule.account_id)
+    if body.enabled and not rule.enabled and not await can_add_rule(db, user, rule.account_id):
+        raise HTTPException(403, "已达启用规则数上限")
+    rule.enabled = body.enabled
+    await db.commit()
+    return {"ok": True}
+
+
+@router.patch("/events/{event_id}/read")
+async def read_event(event_id: int, user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    event = (await db.execute(select(AlertEvent).join(AlertRule).where(
+        AlertEvent.id == event_id, AlertRule.user_id == user.id,
+    ))).scalar_one_or_none()
+    if event is None:
+        raise HTTPException(404, "事件不存在")
+    if event.read_at is None:
+        event.read_at = datetime.now(timezone.utc)
     await db.commit()
     return {"ok": True}
 

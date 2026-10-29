@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr, Field
+import bcrypt
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,12 +14,18 @@ from app.core.database import get_db
 from app.models.entities import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer = HTTPBearer(auto_error=False)
 
 
 def hash_password(p: str) -> str:
-    return pwd.hash(p)
+    return bcrypt.hashpw(p.encode("utf-8"), bcrypt.gensalt()).decode("ascii")
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("ascii"))
+    except (ValueError, UnicodeError):
+        return False
 
 
 def create_token(user_id: int) -> str:
@@ -48,6 +54,13 @@ class RegisterIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=64)
 
+    @field_validator("password")
+    @classmethod
+    def password_bytes(cls, value):
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("密码 UTF-8 编码不能超过 72 字节")
+        return value
+
 
 class LoginIn(BaseModel):
     email: EmailStr
@@ -68,7 +81,7 @@ async def register(body: RegisterIn, db: AsyncSession = Depends(get_db)):
 @router.post("/login")
 async def login(body: LoginIn, db: AsyncSession = Depends(get_db)):
     user = (await db.execute(select(User).where(User.email == body.email))).scalar_one_or_none()
-    if user is None or not pwd.verify(body.password, user.password_hash):
+    if user is None or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "邮箱或密码错误")
     return {"token": create_token(user.id), "is_pro": user.is_pro}
 

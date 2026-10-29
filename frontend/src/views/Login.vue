@@ -5,7 +5,7 @@
         <h1>你的 AI 账单<br />一目了然</h1>
         <p>多家 AI 厂商余额 · 配额 · 消耗速率，一个仪表盘全掌握</p>
         <ul>
-          <li>🔐 Key 只存浏览器，服务器碰不到</li>
+          <li>🔐 Key 加密存浏览器，后端仅内存中转</li>
           <li>📈 烧钱速率与额度预测</li>
           <li>🔔 阈值告警，余额告急早知道</li>
         </ul>
@@ -36,7 +36,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { api } from '../lib/api'
+import { api, errorMessage } from '../lib/api'
+import { lockVault } from '../lib/keyStore'
 
 const router = useRouter()
 const email = ref('')
@@ -53,9 +54,12 @@ async function submit() {
     const { data } = await api.post(url, { email: email.value, password: password.value })
     localStorage.setItem('acm_token', data.token)
     api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`
+    const { data: user } = await api.get('/auth/me')
+    localStorage.setItem('acm_user_id', String(user.id))
+    lockVault()
     router.push('/')
   } catch (e) {
-    err.value = e.response?.data?.detail || '请求失败，请重试'
+    err.value = errorMessage(e)
   } finally {
     loading.value = false
   }

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.entities import Account, AlertEvent, AlertRule, Snapshot
+from app.services.metrics import burn_rate
 
 COOLDOWN = timedelta(hours=12)
 FREE_RULES_PER_ACCOUNT = 1
@@ -29,7 +30,7 @@ async def can_add_rule(db: AsyncSession, user, account_id: int) -> bool:
 async def _in_cooldown(db: AsyncSession, rule_id: int) -> bool:
     since = datetime.now(timezone.utc) - COOLDOWN
     recent = (await db.execute(
-        select(AlertEvent).where(AlertEvent.rule_id == rule_id, AlertEvent.triggered_at > since)
+            select(AlertEvent).where(AlertEvent.rule_id == rule_id, AlertEvent.triggered_at > since).limit(1)
     )).scalar_one_or_none()
     return recent is not None
 
@@ -52,11 +53,20 @@ async def evaluate_alerts(db: AsyncSession, account: Account, snap: Snapshot) ->
     rules = (await db.execute(
         select(AlertRule).where(AlertRule.account_id == account.id, AlertRule.enabled == 1)
     )).scalars().all()
+    if account.status == 3:
+        return []
+    burn = None
+    if any(rule.type == 2 for rule in rules):
+        since = datetime.now(timezone.utc) - timedelta(days=30)
+        snaps = (await db.execute(select(Snapshot).where(
+            Snapshot.account_id == account.id, Snapshot.fetched_at >= since,
+            Snapshot.currency == snap.currency,
+        ).order_by(Snapshot.fetched_at))).scalars().all()
+        burn = burn_rate(snaps)
     events = []
     for rule in rules:
         if await _in_cooldown(db, rule.id):
             continue
-        burn = None  # 速率规则由趋势服务计算后传入，MVP 先支持阈值两类
         msg = _evaluate(rule, snap, burn)
         if msg:
             ev = AlertEvent(rule_id=rule.id, snapshot_id=snap.id, kind=rule.type, message=msg)

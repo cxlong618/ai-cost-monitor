@@ -12,7 +12,7 @@ const router = createRouter({ history: createWebHistory(), routes })
 
 router.beforeEach((to) => {
   const token = localStorage.getItem('acm_token')
-  if (to.name !== 'login' && !token) return { name: 'login' }
+  if (!['login', 'calculator'].includes(to.name) && !token) return { name: 'login' }
 })
 
 export default router
