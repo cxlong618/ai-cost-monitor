@@ -1,22 +1,32 @@
 <template>
-  <div class="layout">
+  <div class="layout" v-if="$route.name !== 'login'">
     <aside class="sidebar">
-      <h1 class="logo">💰 AI 成本监控</h1>
+      <div class="logo">
+        <span class="logo-icon">◈</span>
+        <div>
+          <b>成本监控</b>
+          <small>AI Cost Monitor</small>
+        </div>
+      </div>
       <nav>
-        <router-link to="/">仪表盘</router-link>
-        <router-link to="/accounts">账户管理</router-link>
-        <router-link to="/alerts">告警规则</router-link>
-        <router-link to="/calculator">订阅计算器</router-link>
-        <a href="#" @click.prevent="logout">退出登录</a>
+        <router-link to="/"><span class="ico">📊</span>仪表盘</router-link>
+        <router-link to="/accounts"><span class="ico">🔌</span>账户管理</router-link>
+        <router-link to="/alerts"><span class="ico">🔔</span>告警规则</router-link>
+        <router-link to="/calculator"><span class="ico">🧮</span>订阅计算器</router-link>
       </nav>
-      <footer class="trust">
-        🔐 Key 只存在你的浏览器里<br />服务器见不到、存不了
-      </footer>
+      <div class="sidebar-foot">
+        <div class="trust">
+          <div>🔐 Key 只存在你的浏览器</div>
+          <div>服务器见不到、存不了</div>
+        </div>
+        <button class="logout" @click="logout">退出登录</button>
+      </div>
     </aside>
     <main class="content">
       <router-view />
     </main>
   </div>
+  <router-view v-else />
 </template>
 
 <script setup>
@@ -34,13 +44,47 @@ function logout() {
 <style scoped>
 .layout { display: flex; min-height: 100vh; }
 .sidebar {
-  width: 220px; padding: 20px; background: #1a1f2e; color: #e6e9f0;
+  width: 232px; flex-shrink: 0;
+  background: linear-gradient(180deg, #141a2e 0%, #1a2138 100%);
+  color: #e6e9f5;
   display: flex; flex-direction: column;
+  padding: 22px 14px;
 }
-.logo { font-size: 18px; margin-bottom: 24px; }
-nav { display: flex; flex-direction: column; gap: 8px; }
-nav a { color: #9aa4bf; text-decoration: none; padding: 8px 12px; border-radius: 8px; }
-nav a.router-link-active { background: #2a3149; color: #fff; }
-.trust { margin-top: auto; font-size: 12px; color: #6b7499; line-height: 1.6; }
-.content { flex: 1; padding: 24px; }
+.logo { display: flex; gap: 10px; align-items: center; padding: 0 10px 22px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.logo-icon {
+  width: 38px; height: 38px; display: grid; place-items: center;
+  background: linear-gradient(135deg, #4f6ef7, #7c5cff); border-radius: 11px;
+  font-size: 18px; color: #fff;
+}
+.logo b { font-size: 15px; display: block; }
+.logo small { color: #7b86a8; font-size: 11px; }
+
+nav { display: flex; flex-direction: column; gap: 4px; margin-top: 18px; }
+nav a {
+  display: flex; align-items: center; gap: 10px;
+  color: #97a1c0; text-decoration: none;
+  padding: 11px 12px; border-radius: 10px; font-size: 14px;
+  transition: all 0.15s;
+}
+nav a:hover { color: #fff; background: rgba(255,255,255,0.05); }
+nav a.router-link-active {
+  color: #fff; background: linear-gradient(135deg, rgba(79,110,247,0.35), rgba(124,92,255,0.35));
+  box-shadow: inset 0 0 0 1px rgba(140,160,255,0.25);
+}
+.ico { font-size: 15px; width: 20px; text-align: center; }
+
+.sidebar-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+.trust {
+  background: rgba(79,110,247,0.12); border: 1px solid rgba(124,92,255,0.25);
+  border-radius: 10px; padding: 10px 12px;
+  font-size: 12px; color: #aab5d8; line-height: 1.7;
+}
+.logout {
+  background: transparent; border: 1px solid rgba(255,255,255,0.12);
+  color: #97a1c0; border-radius: 10px; padding: 9px; cursor: pointer; font-size: 13px;
+  transition: all 0.15s;
+}
+.logout:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+.content { flex: 1; padding: 26px 30px; max-width: 1200px; }
 </style>
