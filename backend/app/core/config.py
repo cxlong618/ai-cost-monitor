@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "change-me"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7
     DEEPSEEK_TEST_KEY: str = ""  # 开发期真 Key 验证用，勿提交
+    ZAI_TEST_KEY: str = ""
 
     class Config:
         env_file = ".env"
