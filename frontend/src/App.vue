@@ -5,7 +5,9 @@
       <nav>
         <router-link to="/">仪表盘</router-link>
         <router-link to="/accounts">账户管理</router-link>
+        <router-link to="/alerts">告警规则</router-link>
         <router-link to="/calculator">订阅计算器</router-link>
+        <a href="#" @click.prevent="logout">退出登录</a>
       </nav>
       <footer class="trust">
         🔐 Key 只存在你的浏览器里<br />服务器见不到、存不了
@@ -16,6 +18,18 @@
     </main>
   </div>
 </template>
+
+<script setup>
+import { useRouter } from 'vue-router'
+import { api } from './lib/api'
+
+const router = useRouter()
+function logout() {
+  localStorage.removeItem('acm_token')
+  delete api.defaults.headers.common['Authorization']
+  router.push('/login')
+}
+</script>
 
 <style scoped>
 .layout { display: flex; min-height: 100vh; }

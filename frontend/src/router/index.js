@@ -4,6 +4,7 @@ const routes = [
   { path: '/login', name: 'login', component: () => import('../views/Login.vue') },
   { path: '/', name: 'dashboard', component: () => import('../views/Dashboard.vue') },
   { path: '/accounts', name: 'accounts', component: () => import('../views/Accounts.vue') },
+  { path: '/alerts', name: 'alerts', component: () => import('../views/Alerts.vue') },
   { path: '/calculator', name: 'calculator', component: () => import('../views/Calculator.vue') },
 ]
 
